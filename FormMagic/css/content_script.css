@@ -1,0 +1,38 @@
+#bugClipperMatte {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    top: 0px;
+    left: 0px;
+    position: fixed;
+    border-style: solid;
+    z-index: 100000;
+    border-color: rgba(0, 0, 0, 0.270588);
+    padding: 0;
+}
+#bugClipperCrosshair {
+    height: 100%;
+    position: fixed;
+    width: 100%;
+    z-index: 2147483646;
+}
+#bugClipperCrosshair::before, #bugClipperCrosshair::after {
+    content: "";
+    height: 100%;
+    position: absolute;
+    width: 100%;
+    border: none !important;
+    border-image: !important;
+}
+#bugClipperCrosshair::before {
+    left: -100%;
+    top: -100%;
+    border-right: 1px solid white !important;
+    border-bottom: 1px solid white !important;
+}
+#bugClipperCrosshair::after {
+    left: 0px;
+    top: 0px;
+    border-top: 1px solid white !important;
+    border-left: 1px solid white !important;
+}

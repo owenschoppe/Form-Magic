@@ -1,0 +1,61 @@
+//Work
+//https://gus.lightning.force.com/one/one.app#eyJjb21wb25lbnREZWYiOiJvbmU6YWxvaGFQYWdlIiwiYXR0cmlidXRlcyI6eyJhZGRyZXNzIjoiaHR0cHM6Ly9ndXMubGlnaHRuaW5nLmZvcmNlLmNvbS9hcGV4L0FETV9Xb3JrQ3JlYXRlRWRpdD9SZWNvcmRUeXBlPTAxMjkwMDAwMDAwMDZnRCJ9LCJzdGF0ZSI6e319
+//Find iframe
+
+//Product Tag
+document.getElementById('productTagInput').value = "PS UX > Lightning Flow";
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:productTagInput:productTagInput:productTagSave').value = "a1aB0000000TPy1IAG";
+//Epic
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:epicInput:inputComponent:inputFieldWithContainer').value = "PS UX - Flow Builder";
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:sprintInput:inputComponent:inputFieldWithContainer').value = "2018.08c - PS UX";
+//Scheduled Build
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:scheduledBuildInput:inputComponent:inputFieldWithContainer').value = "218";
+//Assigned to
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:assigneeInput:richAutoComplete:input').value = "Owen Schoppe";
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:assigneeInput:richAutoComplete:idInput').value = "005B0000000hwdeIAA";
+//Subject
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:subjectInput:inputComponent:inputFieldWithContainer').value = "[Flow][Builder]";
+document.getElementById('userStoryEdit:j_id0:workSds:storyWorkForm:subjectInput:inputComponent:inputFieldWithContainer').focus();
+
+
+///Kanban
+//https://gus.lightning.force.com/one/one.app#eyJjb21wb25lbnREZWYiOiJvbmU6YWxvaGFQYWdlIiwiYXR0cmlidXRlcyI6eyJhZGRyZXNzIjoiaHR0cHM6Ly9ndXMubGlnaHRuaW5nLmZvcmNlLmNvbS9hcGV4L2FkbV9rYW5iYW5zcGxhc2g%2FdGVhbWlkPWEwMEIwMDAwMDA3WG1kOUlBQyJ9LCJzdGF0ZSI6e319
+//Find iframe
+
+let next = function(){
+  //Select Product Tag
+  document.getElementById('selection-a1aB0000000TPy1IAG').click()
+
+  //Epic
+  document.getElementById('epicInput').value = "PS UX - Flow Builder";
+  //var fireOnThis = document.getElementById('epicInput');
+  //var evObj = new KeyboardEvent("keypress", {keyCode:40}) ;
+  //fireOnThis.dispatchEvent(evObj);
+  //setTimeout(document.getElementById('selection-a3QB000000056sIMAQ').click(),1000);
+  //document.getElementById('epicInputHidden').value = "a3QB000000056sIMAQ";
+
+  //Sprint
+  document.getElementById('sprintInput').value = "2018.08c - PS UX";
+  //document.getElementById('sprintInputHidden').value = "a0lB0000001L1doIAC";
+
+  //Scheduled Build
+  document.getElementById('scheduledBuildInputUserStory').value = "218";
+  //document.getElementById('scheduledBuildInputUserStoryHidden').value = "a06B0000001F7ATIA0";
+
+  //Assigned to
+  //document.getElementById('assignedToInput').value = "Owen Schoppe";
+  //document.getElementById('assignedToInputHidden').value = "005B0000000hwdeIAA";
+
+  //Subject
+  document.getElementById('subjectInput').value = "[Flow][Builder]";
+  document.getElementById('subjectInput').focus();
+}
+
+//Product Tag
+document.getElementById('productTagInput').value = "Lightning Flow";
+var fireOnThis = document.getElementById('productTagInput');
+fireOnThis.focus();
+var evObj = new KeyboardEvent("keypress", {keyCode:40}) ;
+fireOnThis.dispatchEvent(evObj);
+setTimeout( next, 1000);
+//document.getElementById('productTagInputHidden').value = "a1aB0000000TPy1IAG";

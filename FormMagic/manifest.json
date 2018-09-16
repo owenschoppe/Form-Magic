@@ -1,0 +1,44 @@
+{
+    "manifest_version": 2,
+
+    "name": "Form Magic",
+    "description": "A productivity tool.",
+    "version": "1.0",
+    "options_page": "options.html",
+    "icons": {
+        "16": "images/icon16.png",
+        "32": "images/icon32.png",
+        "128": "images/icon128.png"
+    },
+    "background": {
+        "page": "background.html",
+        "script": "js/background.js"
+    },
+    "content_security_policy": "script-src 'self' https://www.google-analytics.com; object-src 'self'",
+    "browser_action": {
+        "default_icon": {
+            "19": "images/icon19.png",
+            "38": "images/icon38.png"
+        },
+        "default_popup": "popup.html"
+    },
+    "permissions": [
+        "activeTab",
+        "commands",
+        "storage"
+    ],
+    "web_accessible_resources": [
+        "js/frame.js"
+    ],
+    "commands": {
+        "screenshot": {
+            "suggested_key": {
+                "windows": "Ctrl+Shift+X",
+                "mac": "Command+Shift+X",
+                "chromeos": "Ctrl+Shift+X",
+                "linux": "Ctrl+Shift+X"
+            },
+            "description": "Bug Clipper"
+        }
+    }
+}

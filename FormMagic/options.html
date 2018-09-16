@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Bug Clipper Options</title>
+    <link rel="stylesheet" type="text/css" href="/assets/styles/salesforce-lightning-design-system.min.css">
+    <style>
+        .slds-vertical-align--top {
+            align-content: flex-start;
+        }
+    </style>
+    <script type="text/javascript" src="js/analytics.js"></script>
+    <script type="text/javascript" src="js/options.js"></script>
+</head>
+
+<body>
+
+    <div class="slds-grid slds-wrap slds-p-around--large slds-theme--shade slds-grid--frame slds-vertical-align--top">
+        <div class="slds-col slds-size--1-of-1 slds-no-flex">
+            <div class="slds-media slds-media--center">
+                <div class="slds-media__figure">
+                    <img src="/images/icon128.png" class="slds-avatar--medium" alt="Bug Clipper Icon">
+                </div>
+                <div class="slds-media__body">
+                    <h1 class="slds-text-heading--large">Bug Clipper Settings</h1>
+                    <div class="">
+                        <p class="">A bug logging tool for GUS</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="slds-col--padded slds-size--1-of-1 slds-m-top--medium slds-box slds-theme--default slds-no-flex">
+            <h3 class="slds-section-title slds-text-heading--medium slds-m-bottom--medium">Shortcuts</h3>
+            <div class="slds-form--stacked">
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="shortcut">Take Screenshot</label>
+                    <p id="shortcut">
+                        Command-Shift-X
+                    </p>
+                </div>
+            </div>
+            <!-- <p class="slds-form-element__label">
+              chrome://extensions/configureCommands
+            </p> -->
+        </div>
+        <div class="slds-col--padded slds-size--1-of-1 slds-m-top--medium slds-box slds-theme--default slds-no-flex">
+            <h3 class="slds-section-title slds-text-heading--medium slds-m-bottom--medium">Settings</h3>
+            <div class="slds-form">
+                <!-- TODO: use a rich text editor for the template rather than the raw HTML we have here. -->
+                <!-- <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="templateContent">Bug form template</label>
+                    <div class="slds-form-element__control">
+                        <textarea id="templateContent" class="slds-textarea" placeholder="Use {url} and {login} to dynamically replace template content."></textarea>
+                    </div>
+                </div> -->
+                <fieldset class="slds-form--compound">
+                    <legend class="slds-form-element__label">Optional Testing Org Login Info</legend><br>
+                    <legend class="slds-form-element__label">WARNING: Do not enter creds for production orgs (GUS, Org62). Only use for Trial and DE orgs (mobile1).</legend>
+                    <div class="form-element__group">
+                        <div class="slds-form-element__row">
+                            <div class="slds-form-element slds-size--1-of-2">
+                                <label class="slds-form-element__label" for="username">Username</label>
+                                <!-- <div class="slds-form-element__control"> -->
+                                    <input id="username" class="slds-input" type="text" placeholder="username" />
+                                <!-- </div> -->
+                            </div>
+                            <div class="slds-form-element slds-size--1-of-2">
+                                <label class="slds-form-element__label" for="password">Password</label>
+                                <!-- <div class="slds-form-element__control"> -->
+                                    <input id="password" class="slds-input" type="text" placeholder="password" />
+                                <!-- </div> -->
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="slds-form-element slds-p-top--large">
+                    <div class="slds-form-element__control">
+                        <label class="slds-checkbox">
+                            <input type="checkbox" name="options" id="template" />
+                            <span class="slds-checkbox--faux"></span>
+                            <span class="slds-form-element__label">Always fill bug template</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="slds-form-element slds-p-top--large">
+                    <p class="slds-form-element__label">Changes Autosaved</p>
+                </div>
+            </div>
+        </div>
+        <div class="slds-col--padded slds-size--1-of-1 slds-m-top--medium slds-box slds-theme--default slds-no-flex">
+            <h3 class="slds-section-title slds-text-heading--medium slds-m-bottom--medium">Bug Template</h3>
+            <p class="" id="templateContent">
+            </p>
+        </div>
+        <div class="slds-col--padded  slds-size--1-of-1 slds-medium-size--1-of-2 slds-m-top--medium slds-p-horizontal--medium">
+            <h3 class="slds-section-title slds-text-heading--medium ">Feedback?</h3>
+            <a href="mailto:oschoppe@salesforce.com?subject=Bug Clipper feedback">Email me!</a>
+        </div>
+        <div class="slds-col--padded slds-size--1-of-1 slds-medium-size--1-of-2 slds-m-top--medium slds-p-horizontal--medium">
+            <div class="slds-text-label">
+
+                <p>
+
+                </p>
+            </div>
+        </div>
+
+</body>
+
+</html>
