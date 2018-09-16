@@ -74,7 +74,6 @@ function injectFrameScript(tab,frame){
   //TODO check to see which frames have the script already and avoid injecting it into them...
   chrome.tabs.executeScript(tab.id, {
     file: 'js/frame.js',
-    allFrames: true,
     frameId: frame.frameId
   },callback);
 }
