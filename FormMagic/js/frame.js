@@ -2,8 +2,8 @@
   console.log("form magic frame script");
 
   // chrome.extension.sendMessage({greeting: "frame_script", loaded: window.location.href});
-  let temp_recording = {};
-  let record = true;
+  // let temp_recording = {};
+  // let record = true;
 
   // //Listen for messages from injected scripts
   chrome.runtime.onMessage.addListener(
@@ -11,7 +11,9 @@
           console.log(request.greeting);
           //Receive data from backgroud script
           if (request.greeting == "start_recording") {
-              console.log("from_background_test", request);
+              console.log("from_background", request);
+              document.addEventListener('click',logActivity);
+              document.addEventListener('keydown',logActivity);
               sendResponse({
                   farewell: "goodbye"
               });
@@ -24,8 +26,7 @@
               // temp_recording.url = window.location.host;
               // temp_recording.template = [];
               // record = true;
-              document.addEventListener('click',logActivity);
-              document.addEventListener('keydown',logActivity);
+
 
               //Insert stop button into page
               // renderButton();
@@ -33,7 +34,6 @@
         });
 
   let logActivity = function (event){
-    // if(record){
       console.log(event.type,event.target,event);
         //ENTER on combobox item is ignored. Must use mouse.
         //Clicking on icon button registers SVG as target. Must traverse up to find button/link parent with id.
@@ -68,7 +68,6 @@
           //save to log
       //on stop
         //for keydown id in log, get value
-    // }
   };
 
   function renderButton() {
@@ -90,10 +89,10 @@
 
     document.body.insertBefore(button, document.body.lastChild.nextSibling);
 
-    button.addEventListener("click", stop, true);
+    button.addEventListener("click", stopRecording, true);
   }
 
-  let stop = function(event){
+  let stopRecording = function(event){
     console.log("stop recording");
     record = false;
     event.target.parentNode.removeChild(event.target);
@@ -154,5 +153,4 @@
     =simulate arrowdown
     =click menu item
       id
-  */
-})();
+  */})();

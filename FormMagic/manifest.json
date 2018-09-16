@@ -25,7 +25,10 @@
     "permissions": [
         "activeTab",
         "commands",
-        "storage"
+        "storage",
+        "webNavigation",
+        "tabs",
+        "<all_urls>"
     ],
     "web_accessible_resources": [
         "js/frame.js"

@@ -5,6 +5,16 @@
       "<b>Expected Result:</b><br><br><br>" +
       "<b>Actual Result:</b><br><br>";
   var queue = {}; //Queue for images and data for each tab
+  /*
+    "content_scripts": [
+     {
+       "matches": ["<all_urls>"],
+       "js": ["js/frame.js"],
+       "allFrames": true,
+       "runAt": "document_idle"
+     }
+   ],
+*/
 
   //Listen for the browser extension being clicked
   chrome.browserAction.onClicked.addListener(function(tab) {
@@ -41,23 +51,32 @@
 function doInCurrentTab(tabCallback) {
   chrome.tabs.query(
       { currentWindow: true, active: true },
-      function (tabArray) { tabCallback(tabArray[0]); }
+      function (tabArray) {
+        console.log('tabArray',tabArray);
+        chrome.webNavigation.getAllFrames({tabId : tabArray[0].id}, function(frameArray){
+          console.log('frame Array:',frameArray);
+          for(let frame of frameArray){
+            tabCallback(tabArray[0],frame);
+          }
+        });
+        // tabCallback(tabArray[0]);
+      }
   );
 }
 
-function injectFrameScript(tab){
-  function callback(){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})};
+function injectFrameScript(tab,frame){
+  function callback(result){
+    console.log(result);
+    chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
+  }
 
   //Inject framescript and then call it with a message.
   //TODO check to see which frames have the script already and avoid injecting it into them...
   chrome.tabs.executeScript(tab.id, {
     file: 'js/frame.js',
-    allFrames: true
+    allFrames: true,
+    frameId: frame.frameId
   },callback);
-}
-
-function stopRecording(tab){
-  chrome.tabs.sendMessage(tab.id, {greeting: "stop_recording"});
 }
 
   //Listen for messages from injected scripts
@@ -69,9 +88,7 @@ function stopRecording(tab){
               if (request.command == 'start'){
                 console.log('start');
                 doInCurrentTab(injectFrameScript);
-              } else if (request.command == 'stop'){
-                console.log('stop');
-                doInCurrentTab(stopRecording);
+                // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
               } else if (request.command == 'fill'){
                 //fill the form with the selected template
               }
