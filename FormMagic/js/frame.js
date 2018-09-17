@@ -2,8 +2,9 @@
   console.log("form magic frame script");
 
   // chrome.extension.sendMessage({greeting: "frame_script", loaded: window.location.href});
-  // let temp_recording = {};
-  // let record = true;
+  let temp_recording = {};
+  let record = false;
+  let ids = new Map();
 
   // //Listen for messages from injected scripts
   chrome.runtime.onMessage.addListener(
@@ -22,18 +23,20 @@
               //This is our hard coded script
               // fill();
 
+              if(!record){
+                temp_recording.url = window.location.host;
+                temp_recording.template = [];
+                record = true;
 
-              // temp_recording.url = window.location.host;
-              // temp_recording.template = [];
-              // record = true;
 
-
-              //Insert stop button into page
-              // renderButton();
+                //Insert stop button into page
+                renderButton();
+              }
           }
         });
 
   let logActivity = function (event){
+    if(record) {
       console.log(event.type,event.target,event);
         //ENTER on combobox item is ignored. Must use mouse.
         //Clicking on icon button registers SVG as target. Must traverse up to find button/link parent with id.
@@ -61,11 +64,34 @@
         //If keydown
           //Save id to temporary list
           //If id is not already in list, save id to log
+        if(event.type == 'keydown'){
+          if(!ids.has(event.target.id)){
+            console.log('store',event.target);
+            ids.set(event.target.id || 'noId'+ids.length, event);
+          }
+        }
         //If mouse
           //Traverse to parent button/link
           //Save to log
+        else if(event.type == 'click'){
+          //Rather than recursively looking for these limited elements, we could also just turn the
+          // let storeId = function(element){
+          //   if( element.tagName == 'BUTTON','A','INPUT'){
+          //     ids.set(element.id || 'none'+ids.length, event.target);
+          //   } else if (element.parent){
+          //     storeId(element.parent);
+          //   } else {
+          //     //just store the original id...
+          //     ids.set(event.target.id || 'none'+ids.length, event.target);
+          //   }
+          // }
+          // storeId(event.target);
+          ids.set(event.target.id || 'noId'+ids.length, event);
+        }
         //If arrow
           //save to log
+
+      }
       //on stop
         //for keydown id in log, get value
   };
@@ -84,7 +110,7 @@
     button.style.color = "white";
     button.style.borderRadius = ".25rem";
     button.style.border = "none";
-    button.textContent = "Stop";
+    button.textContent = "Stop Recording";
     button.style.padding = "0 1rem";
 
     document.body.insertBefore(button, document.body.lastChild.nextSibling);
