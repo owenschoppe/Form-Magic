@@ -67,33 +67,55 @@
         //If keydown
           //Save id to temporary list
           //If id is not already in list, save id to log
-        if(event.type == 'keydown'){
-          if(!ids.has(event.target.id)){
-            console.log('store',event.target);
-            ids.set(event.target.id || 'noId'+ids.length, event);
+        let getSelector = function(event){
+          let tag = event.target.tagName;
+          let id = event.target.id?"#"+event.target.id:"";
+          let classes = "";
+          for (var className of event.target.classList){
+            classes += "."+className;
           }
-          temp_recording.template.push(event);
+          return tag+id+classes;
         }
-        //If mouse
-          //Traverse to parent button/link
-          //Save to log
-        else if(event.type == 'click'){
-          //Rather than recursively looking for these limited elements, we could also just turn the
-          // let storeId = function(element){
-          //   if( element.tagName == 'BUTTON','A','INPUT'){
-          //     ids.set(element.id || 'none'+ids.length, event.target);
-          //   } else if (element.parent){
-          //     storeId(element.parent);
-          //   } else {
-          //     //just store the original id...
-          //     ids.set(event.target.id || 'none'+ids.length, event.target);
-          //   }
-          // }
-          // storeId(event.target);
-          temp_recording.template.push(event);
+
+        let buildLogItem = function(event){
+          let item = {};
+          item.selector = getSelector(event);
+          item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
+          item.keyCode = event.keyCode || "";
+          item.type = event.type
+          item.key = event.key || "";
+          return item;
         }
-        //If arrow
-          //save to log
+
+        temp_recording.template.push(buildLogItem(event));
+
+        // if(event.type == 'keydown'){
+        //   if(!ids.has(event.target.id)){
+        //     console.log('store',event.target);
+        //     ids.set(event.target.id || 'noId'+ids.length, event);
+        //   }
+        //   temp_recording.template.push(buildLogItem(event));
+        // }
+        // //If mouse
+        //   //Traverse to parent button/link
+        //   //Save to log
+        // else if(event.type == 'click'){
+        //   //Rather than recursively looking for these limited elements, we could also just turn the
+        //   // let storeId = function(element){
+        //   //   if( element.tagName == 'BUTTON','A','INPUT'){
+        //   //     ids.set(element.id || 'none'+ids.length, event.target);
+        //   //   } else if (element.parent){
+        //   //     storeId(element.parent);
+        //   //   } else {
+        //   //     //just store the original id...
+        //   //     ids.set(event.target.id || 'none'+ids.length, event.target);
+        //   //   }
+        //   // }
+        //   // storeId(event.target);
+        //   temp_recording.template.push(buildLogItem(event));
+        // }
+        // //If arrow
+        //   //save to log
 
       }
       //on stop
@@ -140,18 +162,25 @@
   }
 
   let playRecording = function(data){
-    for(var event of data.template){
-      console('play event',event);
-      if(Object.prototype.toString.call(event).includes("MouseEvent")){
-        var evt = new MouseEvent("click", { bubbles: true, cancelable: true, view: window });
-        event.target.dispatchEvent(evt);
-      } else {
-        // var fireOnThis = document.getElementById('productTagInput')
-        //construct the class list....
-        // var fireOnThis = document.querySelector(event.target.tagName+(event.target.id?"#"+event.target.id));
-        var evt = new KeyboardEvent("keypress", {keyCode:event.keyCode}) ;
-        event.target.dispatchEvent(evt);
+    console.log('play recording',data);
+    for(var item of data.template){
+
+      let fireEvent = function(item){
+        let target = document.querySelector(item.selector);
+        console.log('play event',target,item);
+
+        if(item.proto.includes("MouseEvent")){
+          var evt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+          target.dispatchEvent(evt);
+        } else {
+          // target.focus();
+          var evt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
+          target.dispatchEvent(evt);
+        }
       }
+      //run each command with a 100ms delay between
+      setTimeout((item)=>{fireEvent(item)},1000);
+      // fireEvent(item);
     }
   };
 

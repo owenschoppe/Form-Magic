@@ -48,34 +48,45 @@
       }
   });
 
-function doInCurrentTab(tabCallback) {
+function doInCurrentTab(tabCallback,callback) {
   chrome.tabs.query(
       { currentWindow: true, active: true },
       function (tabArray) {
         console.log('tabArray',tabArray);
-        chrome.webNavigation.getAllFrames({tabId : tabArray[0].id}, function(frameArray){
-          console.log('frame Array:',frameArray);
-          for(let frame of frameArray){
-            tabCallback(tabArray[0],frame);
-          }
-        });
-        // tabCallback(tabArray[0]);
+        tabCallback(tabArray[0],callback);
       }
   );
 }
 
-function injectFrameScript(tab,frame){
-  function callback(result){
-    console.log(result);
-    chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
-  }
+function injectFrameScript(tab,callback){
+  // function callback(result){
+  //   console.log(result);
+  //   chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
+  // }
 
   //Inject framescript and then call it with a message.
   //TODO check to see which frames have the script already and avoid injecting it into them...
-  chrome.tabs.executeScript(tab.id, {
-    file: 'js/frame.js',
-    frameId: frame.frameId
-  },callback);
+  chrome.webNavigation.getAllFrames({tabId : tab.id}, function(frameArray){
+    console.log('frame Array:',frameArray);
+    for(let frame of frameArray){
+      chrome.tabs.executeScript(tab.id, {
+        file: 'js/frame.js',
+        frameId: frame.frameId
+      },callback(tab));
+    }
+  });
+}
+
+function start(tab){
+  console.log('send start command');
+  chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
+}
+
+function play(tab){
+  chrome.storage.local.get('recording', function(result) {
+    console.log('send play command',result.recording,tab);
+    chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});
+  });
 }
 
   //Listen for messages from injected scripts
@@ -86,19 +97,12 @@ function injectFrameScript(tab,frame){
           if (request.greeting == "popup") {
               if (request.command == 'start'){
                 console.log('start');
-                doInCurrentTab(injectFrameScript);
+                doInCurrentTab(injectFrameScript,start);
                 // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
               } else if (request.command == 'play'){
                 //fill the form with the selected template
-                chrome.tabs.query(
-                    { currentWindow: true, active: true },
-                    function (tabArray) {
-                      chrome.storage.local.get('recording', function(result) {
-                        chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: result});
-                      });
-
-                    }
-                  );
+                console.log('play');
+                doInCurrentTab(injectFrameScript,play);
               }
               sendResponse({
                   farewell: "good_bye"
