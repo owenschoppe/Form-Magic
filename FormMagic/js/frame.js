@@ -163,9 +163,11 @@
 
   let playRecording = function(data){
     console.log('play recording',data);
-    for(var item of data.template){
 
-      let fireEvent = function(item){
+    (function fireEvent(i){
+      //Run each command with a 100ms delay between.
+      setTimeout(function(){
+        let item = data.template[i];
         let target = document.querySelector(item.selector);
         console.log('play event',target,item);
 
@@ -177,11 +179,10 @@
           var evt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
           target.dispatchEvent(evt);
         }
-      }
-      //run each command with a 100ms delay between
-      setTimeout((item)=>{fireEvent(item)},1000);
-      // fireEvent(item);
-    }
+
+        if(++i < data.template.length) fireEvent(i);
+      },1000);
+    })(0);
   };
 
   let fill = function (){
