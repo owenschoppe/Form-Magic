@@ -25,7 +25,7 @@
 
               if(!record){
                 temp_recording.url = window.location.host;
-                temp_recording.template = new Map();
+                temp_recording.template = [];
                 record = true;
 
 
@@ -33,13 +33,14 @@
                 renderButton();
               }
           } else if (request.greeting == "play_recording") {
+            console.log('play',request);
             playRecording(request.data);
           }
         });
 
   let logActivity = function (event){
     if(record) {
-      console.log(event.type,event.target,event);
+      console.log(event.type,event.target,Object.prototype.toString.call(event.target),Object.prototype.toString.call(event).includes('MouseEvent'),event);
         //ENTER on combobox item is ignored. Must use mouse.
         //Clicking on icon button registers SVG as target. Must traverse up to find button/link parent with id.
         //Need a function to string together consecutive keydown entries on the same input into one value.
@@ -71,7 +72,7 @@
             console.log('store',event.target);
             ids.set(event.target.id || 'noId'+ids.length, event);
           }
-          temp_recording.template.push(event.target.id || 'noId'+temp_recording.template.length, event);
+          temp_recording.template.push(event);
         }
         //If mouse
           //Traverse to parent button/link
@@ -89,7 +90,7 @@
           //   }
           // }
           // storeId(event.target);
-          temp_recording.template.set(event.target.id || 'noId'+temp_recording.template.length, event);
+          temp_recording.template.push(event);
         }
         //If arrow
           //save to log
@@ -130,20 +131,27 @@
 
     //Send data to background for storage
     chrome.runtime.sendMessage({
-        greeting: "frame_script",
-        data:
+        greeting: "frame",
+        data: temp_recording
     }, function(response) {
         console.log(response);
         //forward the data
-        if (response.farewell == 'data') { //ignore if farewell == reset;
-            sendMsg(response);
-        }
     });
   }
 
   let playRecording = function(data){
-    for(var [key,value] of data){
-      if
+    for(var event of data.template){
+      console('play event',event);
+      if(Object.prototype.toString.call(event).includes("MouseEvent")){
+        var evt = new MouseEvent("click", { bubbles: true, cancelable: true, view: window });
+        event.target.dispatchEvent(evt);
+      } else {
+        // var fireOnThis = document.getElementById('productTagInput')
+        //construct the class list....
+        // var fireOnThis = document.querySelector(event.target.tagName+(event.target.id?"#"+event.target.id));
+        var evt = new KeyboardEvent("keypress", {keyCode:event.keyCode}) ;
+        event.target.dispatchEvent(evt);
+      }
     }
   };
 

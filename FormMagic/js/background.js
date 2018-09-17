@@ -88,12 +88,24 @@ function injectFrameScript(tab,frame){
                 console.log('start');
                 doInCurrentTab(injectFrameScript);
                 // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
-              } else if (request.command == 'fill'){
+              } else if (request.command == 'play'){
                 //fill the form with the selected template
+                chrome.tabs.query(
+                    { currentWindow: true, active: true },
+                    function (tabArray) {
+                      chrome.storage.local.get('recording', function(result) {
+                        chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: result});
+                      });
+
+                    }
+                  );
               }
               sendResponse({
                   farewell: "good_bye"
               });
+          } else if (request.greeting == "frame") {
+            // localStorage.recording = request.data;
+            chrome.storage.local.set({'recording': request.data}, function() {});
           }
 
           //Receive data from the bug page

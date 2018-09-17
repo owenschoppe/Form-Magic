@@ -1,7 +1,8 @@
 (function(){
     document.addEventListener('DOMContentLoaded', function () {
-    let id = "start";
-    let button = document.getElementById(id);
+
+    let button = document.getElementById("start");
+
     button.addEventListener('click',(event)=>{
       console.log('start button clicked');
       chrome.runtime.sendMessage({
@@ -12,6 +13,19 @@
           window.close();
       });
     });
+
+    let play = document.getElementById("play");
+    play.addEventListener('click',(event)=>{
+      console.log('start button clicked');
+      chrome.runtime.sendMessage({
+          greeting: "popup",
+          command: "play"
+      }, function(response) {
+          // console.log(response.farewell);
+          window.close();
+      });
+    });
+
   });
 })();
 
