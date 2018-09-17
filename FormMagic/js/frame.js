@@ -25,13 +25,15 @@
 
               if(!record){
                 temp_recording.url = window.location.host;
-                temp_recording.template = [];
+                temp_recording.template = new Map();
                 record = true;
 
 
                 //Insert stop button into page
                 renderButton();
               }
+          } else if (request.greeting == "play_recording") {
+            playRecording(request.data);
           }
         });
 
@@ -69,6 +71,7 @@
             console.log('store',event.target);
             ids.set(event.target.id || 'noId'+ids.length, event);
           }
+          temp_recording.template.push(event.target.id || 'noId'+temp_recording.template.length, event);
         }
         //If mouse
           //Traverse to parent button/link
@@ -86,7 +89,7 @@
           //   }
           // }
           // storeId(event.target);
-          ids.set(event.target.id || 'noId'+ids.length, event);
+          temp_recording.template.set(event.target.id || 'noId'+temp_recording.template.length, event);
         }
         //If arrow
           //save to log
@@ -122,8 +125,27 @@
     console.log("stop recording");
     record = false;
     event.target.parentNode.removeChild(event.target);
+
+    //Collect values for ids
+
+    //Send data to background for storage
+    chrome.runtime.sendMessage({
+        greeting: "frame_script",
+        data:
+    }, function(response) {
+        console.log(response);
+        //forward the data
+        if (response.farewell == 'data') { //ignore if farewell == reset;
+            sendMsg(response);
+        }
+    });
   }
 
+  let playRecording = function(data){
+    for(var [key,value] of data){
+      if
+    }
+  };
 
   let fill = function (){
     //Product Tag
