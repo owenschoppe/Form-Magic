@@ -27,6 +27,25 @@
     });
 
   });
+
+  chrome.runtime.onMessage.addListener(
+    function(request, sender, sendResponse) {
+      console.log(request.greeting);
+      //Receive data from backgroud script
+      if (request.greeting == "data") {
+        console.log("from_background", request);
+        buildList(request.data);
+        sendResponse({
+            farewell: "goodbye"
+        });
+      }
+    }
+  );
+
+  function buildList(data){
+    
+  }
+
 })();
 
 

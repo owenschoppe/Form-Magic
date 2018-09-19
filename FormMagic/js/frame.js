@@ -5,6 +5,7 @@
   let temp_recording = {};
   let record = false;
   let ids = new Map();
+  let baseTime = "";
 
   // //Listen for messages from injected scripts
   chrome.runtime.onMessage.addListener(
@@ -35,6 +36,8 @@
           } else if (request.greeting == "play_recording") {
             console.log('play',request);
             playRecording(request.data);
+
+            //Add an indication to the screen that the recording is playing. And when it stops. Maybe animate the icon. Maybe add an on-screen notification.
           }
         });
 
@@ -84,10 +87,18 @@
           item.keyCode = event.keyCode || "";
           item.type = event.type
           item.key = event.key || "";
+          item.delay = item.proto=="KeyboardEvent"? 10 : Date.now() - (baseTime || Date.now()); //Don't wait for keyboard events.
           return item;
         }
 
         temp_recording.template.push(buildLogItem(event));
+        baseTime = Date.now(); //reset the base to be relative to the last event.
+
+        // let selector = getSelector(event);
+        // if(!ids.has(selector)){
+        //   console.log('store',event.target);
+        //   ids.set(selector);
+        // }
 
         // if(event.type == 'keydown'){
         //   if(!ids.has(event.target.id)){
@@ -150,6 +161,21 @@
     event.target.parentNode.removeChild(event.target);
 
     //Collect values for ids
+    for(var i=temp_recording.template.length-1; i>-1; i--){
+      let selector = temp_recording.template[i].selector;
+      if(!ids.has(selector)){
+        console.log('get value',selector);
+        ids.set(selector); //save the selector so we don't interact with it again.
+        //Add the value to the templates
+        try{
+          temp_recording.template[i].value = document.querySelector(selector).value;
+          console.log(temp_recording.template[i]);
+        } catch(e) {
+          console.log('no value');
+          //do nothing
+        }
+      }
+    }
 
     //Send data to background for storage
     chrome.runtime.sendMessage({
@@ -164,25 +190,46 @@
   let playRecording = function(data){
     console.log('play recording',data);
 
-    (function fireEvent(i){
-      //Run each command with a 100ms delay between.
-      setTimeout(function(){
+    //Only run the function if you can find the first element.
+    if(document.querySelector(data.template[0].selector)){
+      (function fireEvent(i){
+        //Run each command with a 100ms delay between.
+
         let item = data.template[i];
-        let target = document.querySelector(item.selector);
-        console.log('play event',target,item);
 
-        if(item.proto.includes("MouseEvent")){
-          var evt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-          target.dispatchEvent(evt);
-        } else {
-          // target.focus();
-          var evt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
-          target.dispatchEvent(evt);
-        }
+        setTimeout(function(){
+          let now = new Date(Date.now());
 
-        if(++i < data.template.length) fireEvent(i);
-      },1000);
-    })(0);
+          let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
+
+          if(item.proto.includes("MouseEvent")){
+            console.log('mouse event',now.getSeconds(),target,item);
+            var mEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+            target.dispatchEvent(mEvt);
+          } else {
+            if (item.value) {
+              console.log('set value',now.getSeconds(),target,item);
+              target.value = item.value;
+            }
+            //TODO if the last keyboard command is tab or arrow, we may still want to fire it...
+            try {
+              console.log('keyboard event',now.getSeconds(),target,item);
+              target.focus();
+              var kEvt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
+              target.dispatchEvent(kEvt);
+            } catch(e) {
+              console.log("couldn't focus");
+            }
+
+          }
+
+          if(++i < data.template.length) fireEvent(i);
+        },item.delay);
+        //We may want to attempt this recursively to account for network latency on ajax calls.
+      })(0);
+    } else {
+      console.log("This is not the right frame.");
+    }
   };
 
   let fill = function (){
