@@ -49,27 +49,6 @@
         //Need a function to string together consecutive keydown entries on the same input into one value.
           //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
 
-      /*saves the sequence*/
-      /*
-      logs[
-        {
-          url:
-          template:[
-            {
-              type: {keydown,mouse,arrow}
-              id:
-              ~value:
-            },
-            ...
-          ]
-        },
-        ...
-      ]
-      */
-      //on start
-        //If keydown
-          //Save id to temporary list
-          //If id is not already in list, save id to log
         let getSelector = function(event){
           let tag = event.target.tagName;
           let id = event.target.id?"#"+event.target.id:"";
@@ -93,44 +72,7 @@
 
         temp_recording.template.push(buildLogItem(event));
         baseTime = Date.now(); //reset the base to be relative to the last event.
-
-        // let selector = getSelector(event);
-        // if(!ids.has(selector)){
-        //   console.log('store',event.target);
-        //   ids.set(selector);
-        // }
-
-        // if(event.type == 'keydown'){
-        //   if(!ids.has(event.target.id)){
-        //     console.log('store',event.target);
-        //     ids.set(event.target.id || 'noId'+ids.length, event);
-        //   }
-        //   temp_recording.template.push(buildLogItem(event));
-        // }
-        // //If mouse
-        //   //Traverse to parent button/link
-        //   //Save to log
-        // else if(event.type == 'click'){
-        //   //Rather than recursively looking for these limited elements, we could also just turn the
-        //   // let storeId = function(element){
-        //   //   if( element.tagName == 'BUTTON','A','INPUT'){
-        //   //     ids.set(element.id || 'none'+ids.length, event.target);
-        //   //   } else if (element.parent){
-        //   //     storeId(element.parent);
-        //   //   } else {
-        //   //     //just store the original id...
-        //   //     ids.set(event.target.id || 'none'+ids.length, event.target);
-        //   //   }
-        //   // }
-        //   // storeId(event.target);
-        //   temp_recording.template.push(buildLogItem(event));
-        // }
-        // //If arrow
-        //   //save to log
-
-      }
-      //on stop
-        //for keydown id in log, get value
+    }
   };
 
   function renderButton() {
@@ -232,58 +174,4 @@
     }
   };
 
-  let fill = function (){
-    //Product Tag
-    document.getElementById('productTagInput').value = "Lightning Flow";
-    var fireOnThis = document.getElementById('productTagInput');
-    fireOnThis.focus();
-    var evObj = new KeyboardEvent("keypress", {keyCode:40}) ;
-    fireOnThis.dispatchEvent(evObj);
-    setTimeout( next, 1000);
-    //document.getElementById('productTagInputHidden').value = "a1aB0000000TPy1IAG";
-  };
-
-  let next = function(){
-    //Select Product Tag
-    document.getElementById('selection-a1aB0000000TPy1IAG').click();
-
-    //Epic
-    document.getElementById('epicInput').value = "PS UX - Flow Builder";
-    //var fireOnThis = document.getElementById('epicInput');
-    //var evObj = new KeyboardEvent("keypress", {keyCode:40}) ;
-    //fireOnThis.dispatchEvent(evObj);
-    //setTimeout(document.getElementById('selection-a3QB000000056sIMAQ').click(),1000);
-    //document.getElementById('epicInputHidden').value = "a3QB000000056sIMAQ";
-
-    //Sprint
-    document.getElementById('sprintInput').value = "2018.08c - PS UX";
-    //document.getElementById('sprintInputHidden').value = "a0lB0000001L1doIAC";
-
-    //Scheduled Build
-    document.getElementById('scheduledBuildInputUserStory').value = "218";
-    //document.getElementById('scheduledBuildInputUserStoryHidden').value = "a06B0000001F7ATIA0";
-
-    //Assigned to
-    //document.getElementById('assignedToInput').value = "Owen Schoppe";
-    //document.getElementById('assignedToInputHidden').value = "005B0000000hwdeIAA";
-
-    //Subject
-    document.getElementById('subjectInput').value = "[Flow][Builder]";
-    document.getElementById('subjectInput').focus();
-  };
-
-  /*
-  For each group we need:
-  url
-  inputs
-
-  For each input we need:
-  id
-  value
-  focus
-  type (?)
-  aria-haspopup="true"
-    =simulate arrowdown
-    =click menu item
-      id
-  */})();
+})();

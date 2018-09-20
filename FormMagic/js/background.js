@@ -49,13 +49,10 @@
   });
 
 function doInCurrentTab(tabCallback,callback) {
-  chrome.tabs.query(
-      { currentWindow: true, active: true },
-      function (tabArray) {
+  chrome.tabs.query({ currentWindow: true, active: true },function (tabArray) {
         console.log('tabArray',tabArray);
         tabCallback(tabArray[0],callback);
-      }
-  );
+  });
 }
 
 function injectFrameScript(tab,callback){
@@ -82,11 +79,90 @@ function start(tab){
   chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
 }
 
-function play(tab){
-  chrome.storage.local.get('recording', function(result) {
+function play(tab,request){
+
+  chrome.storage.local.get(null,function(result){
+    console.log(result);
+  });
+  debugger;
+  chrome.storage.local.get([request.item], function(result) {
     console.log('send play command',result.recording,tab);
     chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});
   });
+}
+/*------------------------------*/
+//Promise wrapped chrome functions to make it easier to work with async.
+var getStorage = function(request){
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([request.item], function(result) {
+      console.log('storage',result);
+      resolve(result);
+    });
+  });
+};
+
+var getTabs = function(){
+  return new Promise((resolve, reject) => {
+    //Don't run this from the debugger, it will return null.
+    chrome.tabs.query({currentWindow: true, active: true},function (tabArray) {
+      console.log('tabArray',tabArray);
+      resolve(tabArray);
+    });
+  });
+};
+
+var getFrames = function(tab){
+  return new Promise((resolve, reject) => {
+    chrome.webNavigation.getAllFrames({tabId : tab.id}, function(frameArray){
+      console.log('frame Array:',frameArray);
+      resolve(frameArray);
+    });
+  });
+};
+
+var executeScriptInFrames = function(tab,frameArray){
+  return new Promise((resolve, reject) => {
+    for(var frame of frameArray){
+      chrome.tabs.executeScript(tab.id, {
+        file: 'js/frame.js',
+        frameId: frame.frameId
+      },(result)=>{
+        console.log('executed',result);
+        resolve(result);
+      });
+    }
+  });
+};
+
+var sendMessage = function(tab,data){
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: data}, (response)=>{
+      resolve(response);
+    });
+  });
+};
+/*------------------------------*/
+
+var asyncPlay = async function(request,tabArray){
+
+  var data = await getStorage(request);
+  var tabArray = await getTabs();
+  var frames = await getFrames(tabArray[0]);
+  var execute = await executeScriptInFrames(tabArray[0],frames);
+
+  //Bad attempts.
+  // debugger;
+  // chrome.tabs.query({currentWindow: true, active: true},function (tabArray) {
+  //   console.log('tabArray',tabArray);
+  //   chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
+  // });
+  // chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: data[request]});
+  // chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
+  // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});});
+  // return(data);
+
+  var message = await sendMessage(tabArray[0],data[request.item]);
+  // console.log('sent recording','tabArray:',tabArray[0],'data:',data,'request:',request,'frames:',frames,'message:',message);
 }
 
   //Listen for messages from injected scripts
@@ -101,15 +177,32 @@ function play(tab){
                 // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
               } else if (request.command == 'play'){
                 //fill the form with the selected template
-                console.log('play');
-                doInCurrentTab(injectFrameScript,play);
+                console.log('play',request);
+                asyncPlay(request);
+                // debugger;
+                // playInit(request);
+                // chrome.tabs.query({currentWindow: true, active: true},function (tabArray) {
+                //   console.log('tabArray',tabArray);
+                //   asyncPlay(request,tabArray);
+                //   // chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
+                // });
+
+
+                // chrome.storage.local.get([request.item], function(result) {
+                //   console.log('send play command',result.recording,tab);
+                //   // chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});
+                //   doInCurrentTab(injectFrameScript,function(tab){play(tab,result)});
+                // });
+
               }
               sendResponse({
                   farewell: "good_bye"
               });
           } else if (request.greeting == "frame") {
             // localStorage.recording = request.data;
-            chrome.storage.local.set({'recording': request.data}, function() {});
+            let obj = new Object();
+            obj[request.data.url] = request.data;
+            chrome.storage.local.set(obj, function() {});
           }
 
           //Receive data from the bug page

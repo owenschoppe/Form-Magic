@@ -3,6 +3,22 @@
 
     let button = document.getElementById("start");
 
+    var background = chrome.extension.getBackgroundPage(); //do this in global scope for popup.js
+
+    chrome.storage.onChanged.addListener(function(changes, namespace) {
+      // for (key in changes) {
+      //   var storageChange = changes[key];
+      //   console.log('Storage key "%s" in namespace "%s" changed. ' +
+      //               'Old value was "%s", new value is "%s".',
+      //               key,
+      //               namespace,
+      //               storageChange.oldValue,
+      //               storageChange.newValue);
+      // }
+      buildList();
+    });
+    buildList();
+
     button.addEventListener('click',(event)=>{
       console.log('start button clicked');
       chrome.runtime.sendMessage({
@@ -14,17 +30,17 @@
       });
     });
 
-    let play = document.getElementById("play");
-    play.addEventListener('click',(event)=>{
-      console.log('start button clicked');
-      chrome.runtime.sendMessage({
-          greeting: "popup",
-          command: "play"
-      }, function(response) {
-          // console.log(response.farewell);
-          window.close();
-      });
-    });
+    // let play = document.getElementById("play");
+    // play.addEventListener('click',(event)=>{
+    //   console.log('start button clicked');
+    //   chrome.runtime.sendMessage({
+    //       greeting: "popup",
+    //       command: "play"
+    //   }, function(response) {
+    //       // console.log(response.farewell);
+    //       window.close();
+    //   });
+    // });
 
   });
 
@@ -32,7 +48,7 @@
     function(request, sender, sendResponse) {
       console.log(request.greeting);
       //Receive data from backgroud script
-      if (request.greeting == "data") {
+      if (request.greeting == "from_background" && request.command == "data") {
         console.log("from_background", request);
         buildList(request.data);
         sendResponse({
@@ -43,7 +59,33 @@
   );
 
   function buildList(data){
-    
+    chrome.storage.local.get(null,function(result){
+      var list = document.querySelector('#recording_list');
+      list.innerHTML = "";
+      debugger;
+      for(var key in result){
+        let item = result[key];
+        console.log(item);
+        var button = document.createElement('button');
+        button.id = item.url;
+        button.innerText = item.url;
+        button.classList = 'slds-button';
+        var li = document.createElement('li');
+        li.appendChild(button);
+        list.insertBefore(li, list.lastChild);
+        button.addEventListener('click',(event)=>{
+          console.log('play button clicked');
+          chrome.runtime.sendMessage({
+              greeting: "popup",
+              command: "play",
+              item: item.url
+          }, function(response) {
+              // console.log(response.farewell);
+              window.close();
+          });
+        });
+      }
+    });
   }
 
 })();
