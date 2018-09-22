@@ -1,4 +1,7 @@
 (function(){
+  //prevents this script from executing multiple times.
+  if (window.hasRun) return;
+  window.hasRun = true;
   console.log("form magic frame script");
 
   // chrome.extension.sendMessage({greeting: "frame_script", loaded: window.location.href});
