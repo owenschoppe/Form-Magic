@@ -126,8 +126,10 @@
           let item = {};
           // item.xpath = await xpath(event);
           item.siblingText = await siblingText(event);
-          item.selector = await getSelector(event);
-          item.selectorAlt = await getSelectorAlt(event);
+          item.selectors = [];
+          item.selectors[0] = await getSelector(event);
+          item.selectors[1] = await getSelectorAlt(event);
+          item.selectors[2] = await getSelectorAlt2(event);
           item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
           item.keyCode = event.keyCode || "";
           item.type = event.type
@@ -173,7 +175,7 @@
 
     //Collect values for ids
     for(var i=temp_recording.template.length-1; i>-1; i--){
-      let selector = temp_recording.template[i].selector;
+      let selector = temp_recording.template[i].selectors[0];
       if(!ids.has(selector)){
         console.log('get value for',selector);
         ids.set(selector); //save the selector so we don't interact with it again.
@@ -230,33 +232,32 @@
   }
 
   let getElement = function(item){
-    console.log('getElement',item);
-    var elements = [];
-    var element;
-    //first check if we can get the element straight up
-    element = document.querySelector(item.selector)
-    if (element) {
-      return element;
-    } else {
-      console.log('try next element');
-      var tempElements = [];
+    //TODO change this to use an array of element arrays.
+    //pass it item.Selector, item.selectorAlt, item.selectorAlt2
+    //put these selectors into an array in the item
+    //item.selectors[tag+id+classes,tag+classes,tag];
+    var tempElements = [];
+    var results = function(iterations){
+
+      console.log('iterations',iterations);
       try {
-        //if not, then see if we can find one with a similar sibling
-        tempElements = rankMaches(document.querySelectorAll(item.selectorAlt),item);
+        tempElements = rankMaches(document.querySelectorAll(item.selectors[iterations]),item);
         if (tempElements.length == 1) {
           //success! we have one match
-          console.log('found one');
-          return tempElements[0];
-        } else if (tempElement.length > 0){
+          console.log('found one',tempElements[0]);
+          // return tempElements[0];
+        } else if (tempElements.length > 0){
           //narrow it down some more
           //it's sorted best to worst already
           console.log('still needs narrowing',tempElements[0]);
-          return tempElements[0];
+          // return tempElements[0];
         } else {
-          //look some more
-          console.log('found nothing');
-          tempElements = rankMaches(document.querySelectorAll(item.selectorAlt2),item);
-          return tempElements[0];
+          //broaden the search one more time.
+          //this is as broad a search as it goes...
+          console.log('found nothing',tempElements);
+          if (iterations < item.selectors.length){
+            results(++iterations);
+          }
         }
       } catch(e) {
         //hmm, something went seriously wrong.
@@ -264,6 +265,11 @@
       }
     }
 
+    console.log('getElement',item);
+    //   //fill the array
+      results(0);
+      console.log('elements',tempElements);
+      return tempElements[0];
   }
 
   let playRecording = function(data){
