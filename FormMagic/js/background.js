@@ -48,48 +48,6 @@
       }
   });
 
-function doInCurrentTab(tabCallback,callback) {
-  chrome.tabs.query({ currentWindow: true, active: true },function (tabArray) {
-        console.log('tabArray',tabArray);
-        tabCallback(tabArray[0],callback);
-  });
-}
-
-function injectFrameScript(tab,callback){
-  // function callback(result){
-  //   console.log(result);
-  //   chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
-  // }
-
-  //Inject framescript and then call it with a message.
-  //TODO check to see which frames have the script already and avoid injecting it into them...
-  chrome.webNavigation.getAllFrames({tabId : tab.id}, function(frameArray){
-    console.log('frame Array:',frameArray);
-    for(let frame of frameArray){
-      chrome.tabs.executeScript(tab.id, {
-        file: 'js/frame.js',
-        frameId: frame.frameId
-      },callback(tab));
-    }
-  });
-}
-
-function start(tab){
-  console.log('send start command');
-  chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"});
-}
-
-function play(tab,request){
-
-  chrome.storage.local.get(null,function(result){
-    console.log(result);
-  });
-  debugger;
-  chrome.storage.local.get([request.item], function(result) {
-    console.log('send play command',result.recording,tab);
-    chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});
-  });
-}
 /*------------------------------*/
 //Promise wrapped chrome functions to make it easier to work with async.
 var getStorage = function(request){
@@ -143,7 +101,7 @@ var sendMessage = function(tab,data){
   });
 };
 /*------------------------------*/
-
+//TODO store executed frames by their tab. Listen for tab close/reload and remove the frame id in that case. before executing check if the frame id has been tried.
 var asyncStart = async function(){
   var tabArray = await getTabs();
   var frames = await getFrames(tabArray[0]);
@@ -153,26 +111,12 @@ var asyncStart = async function(){
 }
 
 var asyncPlay = async function(request){
-
   var data = await getStorage(request);
   var tabArray = await getTabs();
   var frames = await getFrames(tabArray[0]);
   var execute = await executeScriptInFrames(tabArray[0],frames);
-
-  //Bad attempts.
-  // debugger;
-  // chrome.tabs.query({currentWindow: true, active: true},function (tabArray) {
-  //   console.log('tabArray',tabArray);
-  //   chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
-  // });
-  // chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: data[request]});
-  // chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
-  // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});});
-  // return(data);
-
   var message = await sendMessage(tabArray[0],{greeting: "play_recording", data: data[request.item]});
   console.log('message',message);
-  // console.log('sent recording','tabArray:',tabArray[0],'data:',data,'request:',request,'frames:',frames,'message:',message);
 }
 
   //Listen for messages from injected scripts
@@ -183,28 +127,11 @@ var asyncPlay = async function(request){
           if (request.greeting == "popup") {
               if (request.command == 'start'){
                 console.log('start');
-                // doInCurrentTab(injectFrameScript,start);
-                // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
                 asyncStart();
               } else if (request.command == 'play'){
                 //fill the form with the selected template
                 console.log('play',request);
                 asyncPlay(request);
-                // debugger;
-                // playInit(request);
-                // chrome.tabs.query({currentWindow: true, active: true},function (tabArray) {
-                //   console.log('tabArray',tabArray);
-                //   asyncPlay(request,tabArray);
-                //   // chrome.tabs.sendMessage(tabArray[0].id, {greeting: "play_recording", data: data[request]});
-                // });
-
-
-                // chrome.storage.local.get([request.item], function(result) {
-                //   console.log('send play command',result.recording,tab);
-                //   // chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});
-                //   doInCurrentTab(injectFrameScript,function(tab){play(tab,result)});
-                // });
-
               }
               sendResponse({
                   farewell: "good_bye"
@@ -226,22 +153,6 @@ var asyncPlay = async function(request){
                 cssValue: cssValue
             });
           }
-
-          //Receive data from the bug page
-          // if (request.greeting == "content_script") {
-          //     if (request.command == 'take_screenshot'){
-          //       console.log('take screenshot');
-          //       crop = request.crop;
-          //       chrome.tabs.captureVisibleTab(function(dataURL) {
-          //           openTab(dataURL, request, sender);
-          //       });
-          //       sendResponse({
-          //           farewell: "goodbye"
-          //       });
-          //     } else if (request.command == 'cancel'){
-          //       console.log('cancel clipper');
-          //     }
-          // }
         }
       );
   //         //New tab has loaded the bug form
