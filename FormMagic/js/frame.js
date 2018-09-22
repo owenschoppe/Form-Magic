@@ -12,40 +12,35 @@
 
   // //Listen for messages from injected scripts
   chrome.runtime.onMessage.addListener(
-      function(request, sender, sendResponse) {
-          console.log(request.greeting);
-          //Receive data from backgroud script
-          if (request.greeting == "start_recording") {
-              console.log("from_background", request);
-              document.addEventListener('click',logActivity,true);
-              document.addEventListener('keydown',logActivity,true);
-              sendResponse({
-                  farewell: "starting"
-              });
-              // injectScripts(sender.tab);
+    function(request, sender, sendResponse) {
+      console.log(request.greeting);
+      //Receive data from backgroud script
+      if (request.greeting == "start_recording") {
+          console.log("from_background", request);
+          document.addEventListener('click',logActivity,true);
+          document.addEventListener('keydown',logActivity,true);
+          sendResponse({
+              farewell: "starting"
+          });
 
-              //This is our hard coded script
-              // fill();
+          if(!record){
+            temp_recording.url = window.location.host;
+            temp_recording.template = [];
+            record = true;
 
-              if(!record){
-                temp_recording.url = window.location.host;
-                temp_recording.template = [];
-                record = true;
-
-
-                //Insert stop button into page
-                renderButton();
-              }
-          } else if (request.greeting == "play_recording") {
-            console.log('play',request);
-            playRecording(request.data);
-            sendResponse({farewell:"playing"});
-            //Add an indication to the screen that the recording is playing. And when it stops. Maybe animate the icon. Maybe add an on-screen notification.
-          } else if (request.greeting == "ping") {
-            console.log('ping',request);
-            sendResponse({farewell:"pong"});
+            //Insert stop button into page
+            renderButton();
           }
-        });
+      } else if (request.greeting == "play_recording") {
+        console.log('play',request);
+        playRecording(request.data);
+        sendResponse({farewell:"playing"});
+        //Add an indication to the screen that the recording is playing. And when it stops. Maybe animate the icon. Maybe add an on-screen notification.
+      } else if (request.greeting == "ping") {
+        console.log('ping',request);
+        sendResponse({farewell:"pong"});
+      }
+  });
 
   let logActivity = async function (event){
     if(record) {
@@ -55,13 +50,10 @@
         //Need a function to string together consecutive keydown entries on the same input into one value.
           //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
 
-        let getSelector = async function(event){
-          let tag = event.target.tagName;
-
           //use the slashes to escape the colon. One for js one for css. We may need to double escape when pushing to storage.
           // let id = event.target.id?"#"+event.target.id.replace(':','\\3A ').replace(';','\\;'):"";
           //get the escaped version of the selector id
-          let idF = await function(id){
+          let getId = await function(id){
             return new Promise((resolve,reject) => {
               chrome.runtime.sendMessage({
                   greeting: "frame",
@@ -74,37 +66,7 @@
             });
           };
 
-          //Since selectors are unreliable how else can we locate these elements?
-          //We could traverse up the tree and locate the index of the parent among it's siblings and store this traversal. That coupled with the selector should work.
-          //If we combined the indexed location with the event path, then perhaps we could do some searching in the neighborhood.
-          /*
-          var indexedLocation = {};
-          var findChildIndex = function(child){
-            var i = 0;
-            while( (child = child.previousSibling) != null ) {
-              i++;
-              //at the end i will contain the index.
-            }
-            //store i
-            indexedLocation.unshift(i);
-            //get next index
-            if(child.parentNode != document){
-              findChildIndex(child.parentNode);
-            }
-          }
-          //ALT, slightly slower...
-          for(var i = 0; i<input.parentNode.childElementCount; i++){
-            console.log(i,input.parentNode.children[i]);
-            if(input.parentNode.children[i] == input){
-            	console.log(found);
-              //save out this index for this parent.
-              //go to next parent
-            	break;
-            }
-          }
-          */
-
-          let classesF = function(classList){
+          let getClasses = function(classList){
             return new Promise((resolve,reject) => {
               let classes = "";
               for (var className of classList){
@@ -114,21 +76,58 @@
             });
           };
 
-          var escapedId = await idF(event.target.id);
-          var classes = await classesF(event.target.classList);
-          // let classes = "";
-          // for (var className of event.target.classList){
-          //   classes += "."+className;
-          // }
+        let getSelector = async function(event){
+          let tag = event.target.tagName;
+
+          var escapedId = await getId(event.target.id);
+          var classes = await getClasses(event.target.classList);
           let selector = tag+escapedId+classes;
           console.log('selector',selector);
 
           return selector;
         }
 
+        let getSelectorAlt = async function(event){
+          let tag = event.target.tagName;
+
+          var escapedId = await getId(event.target.id);
+          var classes = await getClasses(event.target.classList);
+          let selector = tag+classes;
+          console.log('selector',selector);
+
+          return selector;
+        }
+
+        let getSelectorAlt2 = async function(event){
+          let tag = event.target.tagName;
+
+          var escapedId = await getId(event.target.id);
+          var classes = await getClasses(event.target.classList);
+          let selector = tag; //+classes;
+          console.log('selector',selector);
+
+          return selector;
+        }
+
+        let xpath = async function(event){
+          debugger;
+        }
+
+        let siblingText = async function(event){
+          let text = [];
+          let siblings = event.target.parentNode.children;
+          for (var i=0; i<siblings.length; i++){
+            text.push(siblings[i].textContent);
+          }
+          return text;
+        }
+
         let buildLogItem = async function(event){
           let item = {};
+          // item.xpath = await xpath(event);
+          item.siblingText = await siblingText(event);
           item.selector = await getSelector(event);
+          item.selectorAlt = await getSelectorAlt(event);
           item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
           item.keyCode = event.keyCode || "";
           item.type = event.type
@@ -201,11 +200,78 @@
     });
   }
 
+  let rankMaches = function(elements,item){
+    var tempElements = [];
+    let maxScore = 0;
+    for(var element of elements){
+      //check the text values of siblings
+      let tempScore = 0;
+
+      let siblings = element.parentNode.children;
+      for(var i=0; i<siblings.length && i<item.siblingText.length; i++){
+        //textContent is recursive, so as we move up we need to be less specific. It doesn't include the input values though... good.
+        if(siblings[i].textContent == item.siblingText[i]){
+          //one sibling matches
+          console.log('match!',siblings[i].textContent,"==",item.siblingText[i],siblings[i].textContent == item.siblingText[i])
+          //tally it up
+          ++tempScore;
+        } else {
+          //no match
+        }
+      }
+      //if this is the best match, update the tempElement array
+      if(tempScore >= maxScore && tempScore > 0){
+        console.log('new best score!',tempScore,element)
+        maxScore = tempScore;
+        tempElements.unshift(element);
+      }
+    }
+    return tempElements;
+  }
+
+  let getElement = function(item){
+    console.log('getElement',item);
+    var elements = [];
+    var element;
+    //first check if we can get the element straight up
+    element = document.querySelector(item.selector)
+    if (element) {
+      return element;
+    } else {
+      console.log('try next element');
+      var tempElements = [];
+      try {
+        //if not, then see if we can find one with a similar sibling
+        tempElements = rankMaches(document.querySelectorAll(item.selectorAlt),item);
+        if (tempElements.length == 1) {
+          //success! we have one match
+          console.log('found one');
+          return tempElements[0];
+        } else if (tempElement.length > 0){
+          //narrow it down some more
+          //it's sorted best to worst already
+          console.log('still needs narrowing',tempElements[0]);
+          return tempElements[0];
+        } else {
+          //look some more
+          console.log('found nothing');
+          tempElements = rankMaches(document.querySelectorAll(item.selectorAlt2),item);
+          return tempElements[0];
+        }
+      } catch(e) {
+        //hmm, something went seriously wrong.
+        console.log('abort',e);
+      }
+    }
+
+  }
+
   let playRecording = function(data){
     console.log('play recording',data);
+    // let element = getElement()
 
     //Only run the function if you can find the first element.
-    if(document.querySelector(data.template[0].selector)){
+    // if(document.querySelector(data.template[0].selector)){
       (function fireEvent(i){
         //Run each command with a 100ms delay between.
 
@@ -215,7 +281,8 @@
           let now = new Date(Date.now());
 
           try{
-            let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
+            // let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
+            let target = getElement(item);
 
             if(item.proto.includes("MouseEvent")){
               try{
@@ -253,9 +320,9 @@
         },item.delay);
         //We may want to attempt this recursively to account for network latency on ajax calls.
       })(0);
-    } else {
-      console.log("This is not the right frame.");
-    }
+    // } else {
+    //   console.log("This is not the right frame.");
+    // }
   };
 
 })();
