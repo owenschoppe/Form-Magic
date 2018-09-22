@@ -14,10 +14,10 @@
           //Receive data from backgroud script
           if (request.greeting == "start_recording") {
               console.log("from_background", request);
-              document.addEventListener('click',logActivity);
-              document.addEventListener('keydown',logActivity);
+              document.addEventListener('click',logActivity,true);
+              document.addEventListener('keydown',logActivity,true);
               sendResponse({
-                  farewell: "goodbye"
+                  farewell: "starting"
               });
               // injectScripts(sender.tab);
 
@@ -36,12 +36,15 @@
           } else if (request.greeting == "play_recording") {
             console.log('play',request);
             playRecording(request.data);
-
+            sendResponse({farewell:"playing"});
             //Add an indication to the screen that the recording is playing. And when it stops. Maybe animate the icon. Maybe add an on-screen notification.
+          } else if (request.greeting == "ping") {
+            console.log('ping',request);
+            sendResponse({farewell:"pong"});
           }
         });
 
-  let logActivity = function (event){
+  let logActivity = async function (event){
     if(record) {
       console.log(event.type,event.target,Object.prototype.toString.call(event.target),Object.prototype.toString.call(event).includes('MouseEvent'),event);
         //ENTER on combobox item is ignored. Must use mouse.
@@ -49,28 +52,92 @@
         //Need a function to string together consecutive keydown entries on the same input into one value.
           //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
 
-        let getSelector = function(event){
+        let getSelector = async function(event){
           let tag = event.target.tagName;
-          let id = event.target.id?"#"+event.target.id:"";
-          let classes = "";
-          for (var className of event.target.classList){
-            classes += "."+className;
+
+          //use the slashes to escape the colon. One for js one for css. We may need to double escape when pushing to storage.
+          // let id = event.target.id?"#"+event.target.id.replace(':','\\3A ').replace(';','\\;'):"";
+          //get the escaped version of the selector id
+          let idF = await function(id){
+            return new Promise((resolve,reject) => {
+              chrome.runtime.sendMessage({
+                  greeting: "frame",
+                  command: "cssEscape",
+                  data: id
+              }, function(response) {
+                  // console.log(response);
+                  resolve(response.cssValue);
+              });
+            });
+          };
+
+          //Since selectors are unreliable how else can we locate these elements?
+          //We could traverse up the tree and locate the index of the parent among it's siblings and store this traversal. That coupled with the selector should work.
+          //If we combined the indexed location with the event path, then perhaps we could do some searching in the neighborhood.
+          /*
+          var indexedLocation = {};
+          var findChildIndex = function(child){
+            var i = 0;
+            while( (child = child.previousSibling) != null ) {
+              i++;
+              //at the end i will contain the index.
+            }
+            //store i
+            indexedLocation.unshift(i);
+            //get next index
+            if(child.parentNode != document){
+              findChildIndex(child.parentNode);
+            }
           }
-          return tag+id+classes;
+          //ALT, slightly slower...
+          for(var i = 0; i<input.parentNode.childElementCount; i++){
+            console.log(i,input.parentNode.children[i]);
+            if(input.parentNode.children[i] == input){
+            	console.log(found);
+              //save out this index for this parent.
+              //go to next parent
+            	break;
+            }
+          }
+          */
+
+          let classesF = function(classList){
+            return new Promise((resolve,reject) => {
+              let classes = "";
+              for (var className of classList){
+                classes += "."+className;
+              }
+              resolve(classes);
+            });
+          };
+
+          var escapedId = await idF(event.target.id);
+          var classes = await classesF(event.target.classList);
+          // let classes = "";
+          // for (var className of event.target.classList){
+          //   classes += "."+className;
+          // }
+          let selector = tag+escapedId+classes;
+          console.log('selector',selector);
+
+          return selector;
         }
 
-        let buildLogItem = function(event){
+        let buildLogItem = async function(event){
           let item = {};
-          item.selector = getSelector(event);
+          item.selector = await getSelector(event);
           item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
           item.keyCode = event.keyCode || "";
           item.type = event.type
           item.key = event.key || "";
           item.delay = item.proto=="KeyboardEvent"? 10 : Date.now() - (baseTime || Date.now()); //Don't wait for keyboard events.
+          console.log('log line',item);
           return item;
         }
 
-        temp_recording.template.push(buildLogItem(event));
+        let logItem = await buildLogItem(event);
+
+        temp_recording.template.push(logItem);
         baseTime = Date.now(); //reset the base to be relative to the last event.
     }
   };
@@ -106,14 +173,15 @@
     for(var i=temp_recording.template.length-1; i>-1; i--){
       let selector = temp_recording.template[i].selector;
       if(!ids.has(selector)){
-        console.log('get value',selector);
+        console.log('get value for',selector);
         ids.set(selector); //save the selector so we don't interact with it again.
         //Add the value to the templates
         try{
           temp_recording.template[i].value = document.querySelector(selector).value;
+          // temp_recording.template[i].selector = selector.replace(":","\\:");
           console.log(temp_recording.template[i]);
         } catch(e) {
-          console.log('no value');
+          console.log('no value',e);
           //do nothing
         }
       }
@@ -122,6 +190,7 @@
     //Send data to background for storage
     chrome.runtime.sendMessage({
         greeting: "frame",
+        command: "store",
         data: temp_recording
     }, function(response) {
         console.log(response);
@@ -142,28 +211,40 @@
         setTimeout(function(){
           let now = new Date(Date.now());
 
-          let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
+          try{
+            let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
 
-          if(item.proto.includes("MouseEvent")){
-            console.log('mouse event',now.getSeconds(),target,item);
-            var mEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-            target.dispatchEvent(mEvt);
-          } else {
-            if (item.value) {
-              console.log('set value',now.getSeconds(),target,item);
-              target.value = item.value;
-            }
-            //TODO if the last keyboard command is tab or arrow, we may still want to fire it...
-            try {
-              console.log('keyboard event',now.getSeconds(),target,item);
-              target.focus();
-              var kEvt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
-              target.dispatchEvent(kEvt);
-            } catch(e) {
-              console.log("couldn't focus");
-            }
+            if(item.proto.includes("MouseEvent")){
+              try{
+                console.log('mouse event',now.getSeconds(),target,item);
+                var mEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                target.dispatchEvent(mEvt);
+              } catch(e) {
+                console.log(e);
+              }
+            } else {
+              if (item.value) {
+                try{
+                  console.log('set value',now.getSeconds(),target,item);
+                  target.value = item.value;
+                } catch(e){
+                  console.log(e);
+                }
+              }
+              //TODO if the last keyboard command is tab or arrow, we may still want to fire it...
+              try {
+                console.log('keyboard event',now.getSeconds(),target,item);
+                target.focus();
+                var kEvt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
+                target.dispatchEvent(kEvt);
+              } catch(e) {
+                console.log("couldn't focus", e);
+              }
 
-          }
+            }
+        } catch(e){
+          console.log(e);
+        }
 
           if(++i < data.template.length) fireEvent(i);
         },item.delay);

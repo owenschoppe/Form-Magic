@@ -120,30 +120,39 @@ var getFrames = function(tab){
   });
 };
 
-var executeScriptInFrames = function(tab,frameArray){
-  return new Promise((resolve, reject) => {
-    for(var frame of frameArray){
+var executeScriptInFrames = async function(tab,frameArray){
+  for(var frame of frameArray){
+    await new Promise((resolve, reject) => {
       chrome.tabs.executeScript(tab.id, {
         file: 'js/frame.js',
         frameId: frame.frameId
       },(result)=>{
-        console.log('executed',result);
+        console.log('executed',result,frame.frameId);
         resolve(result);
       });
-    }
-  });
+    });
+  }
+  return(frameArray);
 };
 
 var sendMessage = function(tab,data){
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: data}, (response)=>{
+    chrome.tabs.sendMessage(tab.id, data, (response)=>{
       resolve(response);
     });
   });
 };
 /*------------------------------*/
 
-var asyncPlay = async function(request,tabArray){
+var asyncStart = async function(){
+  var tabArray = await getTabs();
+  var frames = await getFrames(tabArray[0]);
+  var execute = await executeScriptInFrames(tabArray[0],frames);
+  var message = await sendMessage(tabArray[0],{greeting: "start_recording"});
+  console.log('message',message);
+}
+
+var asyncPlay = async function(request){
 
   var data = await getStorage(request);
   var tabArray = await getTabs();
@@ -161,7 +170,8 @@ var asyncPlay = async function(request,tabArray){
   // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "play_recording", data: result.recording});});
   // return(data);
 
-  var message = await sendMessage(tabArray[0],data[request.item]);
+  var message = await sendMessage(tabArray[0],{greeting: "play_recording", data: data[request.item]});
+  console.log('message',message);
   // console.log('sent recording','tabArray:',tabArray[0],'data:',data,'request:',request,'frames:',frames,'message:',message);
 }
 
@@ -173,8 +183,9 @@ var asyncPlay = async function(request,tabArray){
           if (request.greeting == "popup") {
               if (request.command == 'start'){
                 console.log('start');
-                doInCurrentTab(injectFrameScript,start);
+                // doInCurrentTab(injectFrameScript,start);
                 // doInCurrentTab(function(tab){chrome.tabs.sendMessage(tab.id, {greeting: "start_recording"})});
+                asyncStart();
               } else if (request.command == 'play'){
                 //fill the form with the selected template
                 console.log('play',request);
@@ -198,11 +209,22 @@ var asyncPlay = async function(request,tabArray){
               sendResponse({
                   farewell: "good_bye"
               });
-          } else if (request.greeting == "frame") {
+          } else if (request.greeting == "frame" && request.command == "store") {
             // localStorage.recording = request.data;
             let obj = new Object();
             obj[request.data.url] = request.data;
             chrome.storage.local.set(obj, function() {});
+            sendResponse({
+                farewell: "goodbye"
+            });
+          } else if (request.greeting == "frame" && request.command == "cssEscape") {
+            var escapeResult = cssEscape(request.data, false);
+            var cssValue = escapeResult.output !=="" ? '#' + escapeResult.output : "";
+            var qsaValue = doubleSlash(cssValue.replace(/^#\\_/, '#_'));
+            sendResponse({
+                qsaValue: qsaValue,
+                cssValue: cssValue
+            });
           }
 
           //Receive data from the bug page
