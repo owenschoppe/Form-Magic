@@ -1,3 +1,11 @@
+String.prototype.hashCode = function() {
+    var hash = 0, i = 0, len = this.length;
+    while ( i < len ) {
+        hash  = ((hash << 5) - hash + this.charCodeAt(i++)) << 0;
+    }
+    return hash;
+};
+
 (function(){
   //prevents this script from executing multiple times.
   if (window.hasRun) return;
@@ -26,6 +34,7 @@
           if(!record){
             temp_recording.url = window.location.host;
             temp_recording.template = [];
+            temp_recording.context = {};
             record = true;
 
             //Insert stop button into page
@@ -42,6 +51,45 @@
       }
   });
 
+  let siblingText2 = async function(element,stopCondition){
+    //v2 recusive generations sibling text with direct line markers
+    /*
+    {generations: [
+      {
+        directIndex: i,
+        text: [
+          foo,
+          bar
+        ]
+      },
+      ...
+    ]}
+    */
+    let generations = [];
+    let depth = 0;
+
+    //the body node catches all the css/js... stop one before that
+    //max depth observed so far is ~26
+    while(element.parentNode != document.body && generations.length < 2){
+      //per generation
+      let siblings = element.parentNode.children;
+      let generation = {};
+      generation.depth = depth;
+      generation.directIndex = null;
+      generation.text = [];
+      for (var i=0; i<siblings.length; i++){
+        generation.text.push(siblings[i].textContent); //we may want to trim this and use a startsWith instead. prevent filling memory accidentally.
+        if(siblings[i] == element) generation.directIndex = i;
+      }
+      generations.push(generation); //save this generation
+      element = element.parentNode; //move up one generation
+      ++depth;
+    }
+
+    return generations;
+  }
+
+
   let logActivity = async function (event){
     if(record) {
       console.log(event.type,event.target,Object.prototype.toString.call(event.target),Object.prototype.toString.call(event).includes('MouseEvent'),event);
@@ -50,8 +98,6 @@
         //Need a function to string together consecutive keydown entries on the same input into one value.
           //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
 
-          //use the slashes to escape the colon. One for js one for css. We may need to double escape when pushing to storage.
-          // let id = event.target.id?"#"+event.target.id.replace(':','\\3A ').replace(';','\\;'):"";
           //get the escaped version of the selector id
           let getId = await function(id){
             return new Promise((resolve,reject) => {
@@ -76,43 +122,11 @@
             });
           };
 
-        let getSelector = async function(event){
-          let tag = event.target.tagName;
-
-          var escapedId = await getId(event.target.id);
-          var classes = await getClasses(event.target.classList);
-          let selector = tag+escapedId+classes;
-          console.log('selector',selector);
-
-          return selector;
-        }
-
-        let getSelectorAlt = async function(event){
-          let tag = event.target.tagName;
-
-          var escapedId = await getId(event.target.id);
-          var classes = await getClasses(event.target.classList);
-          let selector = tag+classes;
-          console.log('selector',selector);
-
-          return selector;
-        }
-
-        let getSelectorAlt2 = async function(event){
-          let tag = event.target.tagName;
-
-          var escapedId = await getId(event.target.id);
-          var classes = await getClasses(event.target.classList);
-          let selector = tag; //+classes;
-          console.log('selector',selector);
-
-          return selector;
-        }
-
         let xpath = async function(event){
           debugger;
         }
 
+        //v1 sibling text function
         let siblingText = async function(event){
           let text = [];
           let siblings = event.target.parentNode.children;
@@ -124,20 +138,30 @@
 
         let buildLogItem = async function(event){
           let item = {};
+          let tag = event.target.tagName;
+          var escapedId = await getId(event.target.id);
+          var classes = await getClasses(event.target.classList);
+
           // item.xpath = await xpath(event);
-          item.siblingText = await siblingText(event);
+          // item.siblingText = await siblingText(event);
+          // item.generations = await siblingText2(event.target); //we really only need to store this once for each id... could we do it later?
+
+          item.guid = JSON.stringify(event.target.outerHTML);
+          temp_recording.context[item.guid] = await siblingText2(event.target); //could just keep overwriting this thing... doesn't solve the duplicate selectors... "div.foo";
+
           item.selectors = [];
-          item.selectors[0] = await getSelector(event);
-          item.selectors[1] = await getSelectorAlt(event);
-          item.selectors[2] = await getSelectorAlt2(event);
+          item.selectors[0] = tag+escapedId+classes;
+          item.selectors[1] = tag+classes;
+          item.selectors[2] = tag;
           item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
           item.keyCode = event.keyCode || "";
-          item.type = event.type
+          item.type = event.type;
           item.key = event.key || "";
           item.delay = item.proto=="KeyboardEvent"? 10 : Date.now() - (baseTime || Date.now()); //Don't wait for keyboard events.
           console.log('log line',item);
           return item;
         }
+
 
         let logItem = await buildLogItem(event);
 
@@ -168,9 +192,10 @@
     button.addEventListener("click", stopRecording, true);
   }
 
-  let stopRecording = function(event){
+  let stopRecording = async function(event){
     console.log("stop recording");
     record = false;
+    //hide button
     event.target.parentNode.removeChild(event.target);
 
     //Collect values for ids
@@ -181,8 +206,8 @@
         ids.set(selector); //save the selector so we don't interact with it again.
         //Add the value to the templates
         try{
+          //we should probably do this in a separate array as well and use the guid...or if we trust our context search...or for this time only add an identifier to the dom element the first time through.
           temp_recording.template[i].value = document.querySelector(selector).value;
-          // temp_recording.template[i].selector = selector.replace(":","\\:");
           console.log(temp_recording.template[i]);
         } catch(e) {
           console.log('no value',e);
@@ -202,7 +227,7 @@
     });
   }
 
-  let rankMaches = function(elements,item){
+  let rankMaches = function(elements,item,context){
     var tempElements = [];
     let maxScore = 0;
     for(var element of elements){
@@ -210,13 +235,18 @@
       let tempScore = 0;
 
       let siblings = element.parentNode.children;
-      for(var i=0; i<siblings.length && i<item.siblingText.length; i++){
+      for(var i=0; i<siblings.length && i<context.text.length; i++){
         //textContent is recursive, so as we move up we need to be less specific. It doesn't include the input values though... good.
-        if(siblings[i].textContent == item.siblingText[i]){
+        if(siblings[i].textContent == context.text[i]){
           //one sibling matches
-          console.log('match!',siblings[i].textContent,"==",item.siblingText[i],siblings[i].textContent == item.siblingText[i])
+          console.log('match!',siblings[i].textContent,"==",context.text[i],siblings[i].textContent == context.text[i])
           //tally it up
           ++tempScore;
+          if(i == context.directIndex){
+            //double count this element if the element itself matches.
+            //selects for the button clicked among siblings since all have identical context.
+            ++tempScore;
+          }
         } else {
           //no match
         }
@@ -231,7 +261,7 @@
     return tempElements;
   }
 
-  let getElement = function(item){
+  let getElement = function(item,context){
     //TODO change this to use an array of element arrays.
     //pass it item.Selector, item.selectorAlt, item.selectorAlt2
     //put these selectors into an array in the item
@@ -239,9 +269,9 @@
     var tempElements = [];
     var results = function(iterations){
 
-      console.log('iterations',iterations);
+      console.log('iterations',iterations,document.querySelectorAll(item.selectors[iterations]));
       try {
-        tempElements = rankMaches(document.querySelectorAll(item.selectors[iterations]),item);
+        tempElements = rankMaches(document.querySelectorAll(item.selectors[iterations]),item,context[0]);
         if (tempElements.length == 1) {
           //success! we have one match
           console.log('found one',tempElements[0]);
@@ -282,13 +312,14 @@
         //Run each command with a 100ms delay between.
 
         let item = data.template[i];
+        let context = data.context[item.guid];
 
         setTimeout(function(){
           let now = new Date(Date.now());
 
           try{
             // let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
-            let target = getElement(item);
+            let target = getElement(item,context);
 
             if(item.proto.includes("MouseEvent")){
               try{
@@ -323,7 +354,7 @@
         }
 
           if(++i < data.template.length) fireEvent(i);
-        },item.delay);
+        },(item.delay>1000?1000:item.delay));
         //We may want to attempt this recursively to account for network latency on ajax calls.
       })(0);
     // } else {
