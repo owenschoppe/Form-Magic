@@ -1,12 +1,4 @@
-String.prototype.hashCode = function() {
-    var hash = 0, i = 0, len = this.length;
-    while ( i < len ) {
-        hash  = ((hash << 5) - hash + this.charCodeAt(i++)) << 0;
-    }
-    return hash;
-};
-
-(function(){
+(function() {
   //prevents this script from executing multiple times.
   if (window.hasRun) return;
   window.hasRun = true;
@@ -24,149 +16,116 @@ String.prototype.hashCode = function() {
       console.log(request.greeting);
       //Receive data from backgroud script
       if (request.greeting == "start_recording") {
-          console.log("from_background", request);
-          document.addEventListener('click',logActivity,true);
-          document.addEventListener('keydown',logActivity,true);
-          sendResponse({
-              farewell: "starting"
-          });
-
-          if(!record){
-            temp_recording.url = window.location.host;
-            temp_recording.template = [];
-            temp_recording.context = {};
-            record = true;
-
-            //Insert stop button into page
-            renderButton();
-          }
+        console.log("from_background", request);
+        document.addEventListener('click', logActivity, true);
+        document.addEventListener('keydown', logActivity, true);
+        sendResponse({
+          farewell: "starting"
+        });
+        if (!record) {
+          temp_recording.url = window.location.host;
+          temp_recording.template = [];
+          temp_recording.context = {};
+          record = true;
+          //Insert stop button into page
+          renderButton();
+        }
       } else if (request.greeting == "play_recording") {
-        console.log('play',request);
+        console.log('play', request);
         playRecording(request.data);
-        sendResponse({farewell:"playing"});
+        sendResponse({
+          farewell: "playing"
+        });
         //Add an indication to the screen that the recording is playing. And when it stops. Maybe animate the icon. Maybe add an on-screen notification.
       } else if (request.greeting == "ping") {
-        console.log('ping',request);
-        sendResponse({farewell:"pong"});
+        console.log('ping', request);
+        sendResponse({
+          farewell: "pong"
+        });
       }
-  });
+    });
 
-  let siblingText2 = async function(element,stopCondition){
-    //v2 recusive generations sibling text with direct line markers
-    /*
-    {generations: [
-      {
-        directIndex: i,
-        text: [
-          foo,
-          bar
-        ]
-      },
-      ...
-    ]}
-    */
+  let siblingText = async function(element, stopCondition) {
     let generations = [];
     let depth = 0;
-
     //the body node catches all the css/js... stop one before that
     //max depth observed so far is ~26
-    while(element.parentNode != document.body && generations.length < 2){
+    while (element.parentNode != document.body && generations.length < 4) {
       //per generation
       let siblings = element.parentNode.children;
       let generation = {};
       generation.depth = depth;
       generation.directIndex = null;
       generation.text = [];
-      for (var i=0; i<siblings.length; i++){
+      for (var i = 0; i < siblings.length; i++) {
         generation.text.push(siblings[i].textContent); //we may want to trim this and use a startsWith instead. prevent filling memory accidentally.
-        if(siblings[i] == element) generation.directIndex = i;
+        if (siblings[i] == element) generation.directIndex = i;
       }
       generations.push(generation); //save this generation
       element = element.parentNode; //move up one generation
       ++depth;
     }
-
     return generations;
   }
 
 
-  let logActivity = async function (event){
-    if(record) {
-      console.log(event.type,event.target,Object.prototype.toString.call(event.target),Object.prototype.toString.call(event).includes('MouseEvent'),event);
-        //ENTER on combobox item is ignored. Must use mouse.
-        //Clicking on icon button registers SVG as target. Must traverse up to find button/link parent with id.
-        //Need a function to string together consecutive keydown entries on the same input into one value.
-          //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
+  let logActivity = async function(event) {
+    if (record) {
+      console.log(event.type, event.target, Object.prototype.toString.call(event.target), Object.prototype.toString.call(event).includes('MouseEvent'), event);
+      //ENTER on combobox item is ignored. Must use mouse.
+      //Since we can't anticipate the various rules of how those presses will be interpretted. I suggest we log the id, ignore the keycode, and at the end or next tab/click, request the "value" for the input.
 
-          //get the escaped version of the selector id
-          let getId = await function(id){
-            return new Promise((resolve,reject) => {
-              chrome.runtime.sendMessage({
-                  greeting: "frame",
-                  command: "cssEscape",
-                  data: id
-              }, function(response) {
-                  // console.log(response);
-                  resolve(response.cssValue);
-              });
-            });
-          };
+      //get the escaped version of the selector id
+      let getId = await
+      function(id) {
+        return new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({
+            greeting: "frame",
+            command: "cssEscape",
+            data: id
+          }, function(response) {
+            // console.log(response);
+            resolve(response.cssValue);
+          });
+        });
+      };
 
-          let getClasses = function(classList){
-            return new Promise((resolve,reject) => {
-              let classes = "";
-              for (var className of classList){
-                classes += "."+className;
-              }
-              resolve(classes);
-            });
-          };
-
-        let xpath = async function(event){
-          debugger;
-        }
-
-        //v1 sibling text function
-        let siblingText = async function(event){
-          let text = [];
-          let siblings = event.target.parentNode.children;
-          for (var i=0; i<siblings.length; i++){
-            text.push(siblings[i].textContent);
+      let getClasses = function(classList) {
+        return new Promise((resolve, reject) => {
+          let classes = "";
+          for (var className of classList) {
+            classes += "." + className;
           }
-          return text;
-        }
+          resolve(classes);
+        });
+      };
 
-        let buildLogItem = async function(event){
-          let item = {};
-          let tag = event.target.tagName;
-          var escapedId = await getId(event.target.id);
-          var classes = await getClasses(event.target.classList);
+      let buildLogItem = async function(event) {
+        let item = {};
+        let tag = event.target.tagName;
+        var escapedId = await getId(event.target.id);
+        var classes = await getClasses(event.target.classList);
 
-          // item.xpath = await xpath(event);
-          // item.siblingText = await siblingText(event);
-          // item.generations = await siblingText2(event.target); //we really only need to store this once for each id... could we do it later?
+        item.guid = JSON.stringify(event.target.outerHTML);
+        temp_recording.context[item.guid] = await siblingText(event.target); //could just keep overwriting this thing... doesn't solve the duplicate selectors... "div.foo";
 
-          item.guid = JSON.stringify(event.target.outerHTML);
-          temp_recording.context[item.guid] = await siblingText2(event.target); //could just keep overwriting this thing... doesn't solve the duplicate selectors... "div.foo";
+        item.selectors = [];
+        item.selectors[0] = tag + escapedId + classes;
+        item.selectors[1] = tag + classes;
+        item.selectors[2] = tag;
+        item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
+        item.keyCode = event.keyCode || "";
+        item.type = event.type;
+        item.key = event.key || "";
+        item.delay = item.proto == "KeyboardEvent" ? 10 : Date.now() - (baseTime || Date.now()); //Don't wait for keyboard events.
+        console.log('log line', item);
+        return item;
+      }
 
-          item.selectors = [];
-          item.selectors[0] = tag+escapedId+classes;
-          item.selectors[1] = tag+classes;
-          item.selectors[2] = tag;
-          item.proto = Object.prototype.toString.call(event).includes("KeyboardEvent") ? "KeyboardEvent" : "MouseEvent";
-          item.keyCode = event.keyCode || "";
-          item.type = event.type;
-          item.key = event.key || "";
-          item.delay = item.proto=="KeyboardEvent"? 10 : Date.now() - (baseTime || Date.now()); //Don't wait for keyboard events.
-          console.log('log line',item);
-          return item;
-        }
+      let logItem = await buildLogItem(event);
 
-
-        let logItem = await buildLogItem(event);
-
-        temp_recording.template.push(logItem);
-        baseTime = Date.now(); //reset the base to be relative to the last event.
+      temp_recording.template.push(logItem);
+      baseTime = Date.now(); //reset the base to be relative to the last event.
     }
   };
 
@@ -192,25 +151,25 @@ String.prototype.hashCode = function() {
     button.addEventListener("click", stopRecording, true);
   }
 
-  let stopRecording = async function(event){
+  let stopRecording = async function(event) {
     console.log("stop recording");
     record = false;
     //hide button
     event.target.parentNode.removeChild(event.target);
 
     //Collect values for ids
-    for(var i=temp_recording.template.length-1; i>-1; i--){
+    for (var i = temp_recording.template.length - 1; i > -1; i--) {
       let selector = temp_recording.template[i].selectors[0];
-      if(!ids.has(selector)){
-        console.log('get value for',selector);
+      if (!ids.has(selector)) {
+        console.log('get value for', selector);
         ids.set(selector); //save the selector so we don't interact with it again.
         //Add the value to the templates
-        try{
+        try {
           //we should probably do this in a separate array as well and use the guid...or if we trust our context search...or for this time only add an identifier to the dom element the first time through.
           temp_recording.template[i].value = document.querySelector(selector).value;
           console.log(temp_recording.template[i]);
-        } catch(e) {
-          console.log('no value',e);
+        } catch (e) {
+          console.log('no value', e);
           //do nothing
         }
       }
@@ -218,42 +177,46 @@ String.prototype.hashCode = function() {
 
     //Send data to background for storage
     chrome.runtime.sendMessage({
-        greeting: "frame",
-        command: "store",
-        data: temp_recording
+      greeting: "frame",
+      command: "store",
+      data: temp_recording
     }, function(response) {
-        console.log(response);
-        //forward the data
+      console.log(response);
     });
   }
 
-  let rankMaches = function(elements,item,context){
+  let rankMaches = function(elements, item, context, strictMode) {
     var tempElements = [];
     let maxScore = 0;
-    for(var element of elements){
+    for (var element of elements) {
       //check the text values of siblings
       let tempScore = 0;
 
       let siblings = element.parentNode.children;
-      for(var i=0; i<siblings.length && i<context.text.length; i++){
+      for (var i = 0; i < siblings.length && i < context.text.length; i++) {
         //textContent is recursive, so as we move up we need to be less specific. It doesn't include the input values though... good.
-        if(siblings[i].textContent == context.text[i]){
+        if (siblings[i].textContent == context.text[i]) {
           //one sibling matches
-          console.log('match!',siblings[i].textContent,"==",context.text[i],siblings[i].textContent == context.text[i])
-          //tally it up
-          ++tempScore;
-          if(i == context.directIndex){
-            //double count this element if the element itself matches.
-            //selects for the button clicked among siblings since all have identical context.
+          console.log('match!', siblings[i].textContent, "==", context.text[i], siblings[i].textContent == context.text[i]);
+          // only tally if we're not running in strict mode and the text is not blank.
+          if (strictMode && siblings[i].textContent || !strictMode){
+            //tally it up
             ++tempScore;
+            if (i == context.directIndex) {
+              //double count this element if the element itself matches.
+              //selects for the button clicked among siblings since all have identical context.
+              ++tempScore;
+            }
+          } else {
+
           }
         } else {
           //no match
         }
       }
       //if this is the best match, update the tempElement array
-      if(tempScore >= maxScore && tempScore > 0){
-        console.log('new best score!',tempScore,element)
+      if (tempScore >= maxScore && tempScore > 0) {
+        console.log('new best score!', tempScore, element)
         maxScore = tempScore;
         tempElements.unshift(element);
       }
@@ -261,105 +224,108 @@ String.prototype.hashCode = function() {
     return tempElements;
   }
 
-  let getElement = function(item,context){
-    //TODO change this to use an array of element arrays.
-    //pass it item.Selector, item.selectorAlt, item.selectorAlt2
-    //put these selectors into an array in the item
-    //item.selectors[tag+id+classes,tag+classes,tag];
+  let getElement = function(item, context, firstRun) {
     var tempElements = [];
-    var results = function(iterations){
-
-      console.log('iterations',iterations,document.querySelectorAll(item.selectors[iterations]));
+    var results = function(iterations) {
+      console.log('iterations', iterations, document.querySelectorAll(item.selectors[iterations]));
+      let strictMode = firstRun && iterations>0 ? true : false;
       try {
-        tempElements = rankMaches(document.querySelectorAll(item.selectors[iterations]),item,context[0]);
+        tempElements = rankMaches(document.querySelectorAll(item.selectors[iterations]), item, context[0], strictMode);
         if (tempElements.length == 1) {
           //success! we have one match
-          console.log('found one',tempElements[0]);
+          console.log('found one', tempElements);
           // return tempElements[0];
-        } else if (tempElements.length > 0){
+        } else if (tempElements.length > 0) {
           //narrow it down some more
           //it's sorted best to worst already
-          console.log('still needs narrowing',tempElements[0]);
+          console.log('still needs narrowing', tempElements);
+          //TODO check if there is a tie in the score, if so, check the next level of context.
           // return tempElements[0];
         } else {
           //broaden the search one more time.
           //this is as broad a search as it goes...
-          console.log('found nothing',tempElements);
-          if (iterations < item.selectors.length){
+          console.log('found nothing', tempElements);
+          if(firstRun && iterations==2){
+            //don't check the last selector...if this is the first run. FUTURE we could allow the third level but we need better filtering.
+            //basically if we're going to search inputs we can't trust blank == blank context... at that point we need at least one string match...
+            //so if in strictMode we don't find anything the first time though, that means we gave it a good shot, now we need to bail out of here.
+            throw "This doesn't seem like the right tab."
+          }
+          if (iterations < item.selectors.length) {
             results(++iterations);
           }
         }
-      } catch(e) {
+      } catch (e) {
         //hmm, something went seriously wrong.
-        console.log('abort',e);
+        console.log('abort', e);
+        throw e;
       }
     }
-
-    console.log('getElement',item);
+    console.log('getElement', item);
     //   //fill the array
-      results(0);
-      console.log('elements',tempElements);
-      return tempElements[0];
+    results(0);
+    console.log('elements', tempElements);
+    return tempElements[0];
   }
 
-  let playRecording = function(data){
-    console.log('play recording',data);
-    // let element = getElement()
+  let playRecording = function(data) {
+    console.log('play recording', data);
 
-    //Only run the function if you can find the first element.
-    // if(document.querySelector(data.template[0].selector)){
-      (function fireEvent(i){
-        //Run each command with a 100ms delay between.
+    (function fireEvent(i) {
+      //Run each command with a 100ms delay between.
+      let firstRun = i==0 ? true : false;
+      let item = data.template[i];
+      let context = data.context[item.guid];
 
-        let item = data.template[i];
-        let context = data.context[item.guid];
+      setTimeout(function() {
+        let now = new Date(Date.now());
 
-        setTimeout(function(){
-          let now = new Date(Date.now());
+        try {
+          let target = getElement(item, context, firstRun);
 
-          try{
-            // let target = document.querySelector(item.selector); //Wait to acquire the target until after the delay!
-            let target = getElement(item,context);
-
-            if(item.proto.includes("MouseEvent")){
-              try{
-                console.log('mouse event',now.getSeconds(),target,item);
-                var mEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-                target.dispatchEvent(mEvt);
-              } catch(e) {
+          if (item.proto.includes("MouseEvent")) {
+            try {
+              console.log('mouse event', now.getSeconds(), target, item);
+              var mEvt = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              });
+              target.dispatchEvent(mEvt);
+            } catch (e) {
+              console.log(e);
+            }
+          } else {
+            if (item.value) {
+              try {
+                console.log('set value', now.getSeconds(), target, item);
+                target.value = item.value;
+              } catch (e) {
                 console.log(e);
               }
-            } else {
-              if (item.value) {
-                try{
-                  console.log('set value',now.getSeconds(),target,item);
-                  target.value = item.value;
-                } catch(e){
-                  console.log(e);
-                }
-              }
-              //TODO if the last keyboard command is tab or arrow, we may still want to fire it...
-              try {
-                console.log('keyboard event',now.getSeconds(),target,item);
-                target.focus();
-                var kEvt = new KeyboardEvent('keydown', {keyCode:item.keyCode}) ;
-                target.dispatchEvent(kEvt);
-              } catch(e) {
-                console.log("couldn't focus", e);
-              }
-
             }
-        } catch(e){
-          console.log(e);
-        }
+            //TODO if the last keyboard command is tab or arrow, we may still want to fire it...
+            try {
+              console.log('keyboard event', now.getSeconds(), target, item);
+              target.focus();
+              var kEvt = new KeyboardEvent('keydown', {
+                keyCode: item.keyCode
+              });
+              target.dispatchEvent(kEvt);
+            } catch (e) {
+              console.log("couldn't focus", e);
+            }
 
-          if(++i < data.template.length) fireEvent(i);
-        },(item.delay>1000?1000:item.delay));
-        //We may want to attempt this recursively to account for network latency on ajax calls.
-      })(0);
-    // } else {
-    //   console.log("This is not the right frame.");
-    // }
+          }
+        } catch (e) {
+          console.log(e);
+          return;
+        }
+        //call the next row of the template
+        if (++i < data.template.length) fireEvent(i);
+      }, (item.delay > 1000 ? 1000 : item.delay));
+      //We may want to attempt this recursively to account for network latency on ajax calls.
+    })(0);
   };
 
 })();
